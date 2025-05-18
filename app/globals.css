@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+
+    /* Sidebar variables */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-ring: 240 5.9% 10%;
+  }
+
+  .dark {
+    --background: 240 10% 7%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 9.8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 9.8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+
+    /* Sidebar variables */
+    --sidebar: 240 10% 9.8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-ring: 240 4.9% 83.9%;
+
+    /* Custom colors for calendar events */
+    --class-blue: 210 100% 60%;
+    --class-cyan: 180 100% 50%;
+    --class-purple: 270 100% 65%;
+    --exam-red: 0 100% 65%;
+    --exam-orange: 30 100% 60%;
+    --holiday-gray: 240 5% 40%;
+    --break-gray: 240 5% 50%;
+    --lunch-amber: 45 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Calendar specific styles */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(7, 1fr);
+  grid-auto-rows: minmax(60px, auto);
+  gap: 1px;
+}
+
+.calendar-cell {
+  @apply flex flex-col p-1 border border-border rounded-md overflow-hidden transition-all duration-200;
+}
+
+.calendar-cell:hover {
+  @apply bg-secondary/50;
+}
+
+.calendar-event {
+  @apply rounded-md p-1 text-xs font-medium truncate cursor-pointer transition-all duration-200;
+}
+
+.calendar-event:hover {
+  @apply brightness-110 shadow-md;
+}
+
+.event-class-blue {
+  @apply bg-blue-500 text-white;
+}
+
+.event-class-cyan {
+  @apply bg-cyan-500 text-black;
+}
+
+.event-class-purple {
+  @apply bg-purple-500 text-white;
+}
+
+.event-exam-red {
+  @apply bg-red-500 text-white;
+}
+
+.event-exam-orange {
+  @apply bg-orange-500 text-white;
+}
+
+.event-holiday {
+  @apply bg-gray-500 text-white;
+}
+
+.event-break {
+  @apply bg-gray-500/70 text-white;
+}
+
+.event-lunch {
+  @apply bg-amber-500/80 text-black;
+}
+
+.current-time-indicator {
+  @apply absolute w-full h-0.5 bg-red-500 z-10;
+}
+
+/* Admin panel styles */
+.admin-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drag and drop styles */
+.draggable-event {
+  @apply cursor-grab active:cursor-grabbing;
+}
+
+.drop-target {
+  @apply border-2 border-dashed border-primary/50;
+}
+
+.drop-target.can-drop {
+  @apply border-primary bg-primary/10;
+}
+
+.drop-target.cannot-drop {
+  @apply border-destructive bg-destructive/10;
+}
+
+.resizable-handle {
+  @apply absolute bottom-0 right-0 w-4 h-4 cursor-se-resize;
+}
+
+.resizable-handle::after {
+  content: "";
+  @apply absolute bottom-1 right-1 w-2 h-2 border-b-2 border-r-2 border-white/70;
+}
