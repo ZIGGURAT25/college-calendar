@@ -1,3 +1,5 @@
+"use client"
+
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -15,11 +17,10 @@ export function formatDate(date: Date): string {
 }
 
 export function formatTime(time: string): string {
-  const [hours, minutes] = time.split(":")
-  const hour = Number.parseInt(hours, 10)
-  const ampm = hour >= 12 ? "PM" : "AM"
-  const formattedHour = hour % 12 || 12
-  return `${formattedHour}:${minutes} ${ampm}`
+  const [hours, minutes] = time.split(":").map(Number)
+  const period = hours >= 12 ? "PM" : "AM"
+  const formattedHours = hours % 12 || 12
+  return `${formattedHours}:${minutes.toString().padStart(2, "0")} ${period}`
 }
 
 export function getDaysOfWeek(): string[] {
@@ -27,7 +28,7 @@ export function getDaysOfWeek(): string[] {
 }
 
 export function getShortDay(day: string): string {
-  return day.substring(0, 3)
+  return day.slice(0, 3)
 }
 
 export function getMonthDays(year: number, month: number): Date[] {
@@ -88,6 +89,79 @@ export function getCurrentPeriod(periodTimes: any[]): number | null {
     if (current >= start && current <= end) {
       return period.period
     }
+  }
+
+  return null
+}
+
+export function addMinutesToTime(time: string, minutes: number): string {
+  const [hours, mins] = time.split(":").map(Number)
+  const totalMinutes = hours * 60 + mins + minutes
+  const newHours = Math.floor(totalMinutes / 60)
+  const newMinutes = totalMinutes % 60
+  return `${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}`
+}
+
+export function generateTimeSlots(startTime: string, duration: number, count: number): string[] {
+  const slots: string[] = []
+  let currentTime = startTime
+
+  for (let i = 0; i < count; i++) {
+    slots.push(currentTime)
+    currentTime = addMinutesToTime(currentTime, duration)
+  }
+
+  return slots
+}
+
+export function isOverlapping(
+  day: string,
+  periodNumber: number,
+  slotsUsed: number,
+  existingEntries: any[]
+): boolean {
+  const targetSlots = Array.from(
+    { length: slotsUsed },
+    (_, i) => periodNumber + i
+  )
+
+  return existingEntries.some((entry) => {
+    if (entry.day !== day) return false
+
+    const entrySlots = Array.from(
+      { length: entry.slotsUsed },
+      (_, i) => entry.periodNumber + i
+    )
+
+    return targetSlots.some((slot) => entrySlots.includes(slot))
+  })
+}
+
+export function validateTimetableEntry(
+  entry: any,
+  existingEntries: any[],
+  maxPeriodsPerDay: number
+): string | null {
+  // Check if period number is valid
+  if (entry.periodNumber < 1 || entry.periodNumber > maxPeriodsPerDay) {
+    return `Invalid period number. Must be between 1 and ${maxPeriodsPerDay}`
+  }
+
+  // Check if entry would exceed the maximum periods
+  if (entry.periodNumber + entry.slotsUsed - 1 > maxPeriodsPerDay) {
+    return "Entry duration exceeds available periods"
+  }
+
+  // Check for overlapping entries
+  if (
+    isOverlapping(
+      entry.day,
+      entry.periodNumber,
+      entry.slotsUsed,
+      existingEntries.filter((e) => e.id !== entry.id)
+    )
+  ) {
+    return "Entry overlaps with existing classes"
   }
 
   return null

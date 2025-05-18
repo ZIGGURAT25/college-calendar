@@ -13,44 +13,50 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Users className="mr-2 h-5 w-5 text-blue-500" />
-              Students
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">67</p>
-            <p className="text-sm text-muted-foreground">Total enrolled students</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/students" passHref>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center">
+                <Users className="mr-2 h-5 w-5 text-blue-500" />
+                Students
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">67</p>
+              <p className="text-sm text-muted-foreground">Total enrolled students</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <School className="mr-2 h-5 w-5 text-purple-500" />
-              Faculty
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">6</p>
-            <p className="text-sm text-muted-foreground">Teaching staff members</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/faculty" passHref>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center">
+                <School className="mr-2 h-5 w-5 text-purple-500" />
+                Faculty
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">6</p>
+              <p className="text-sm text-muted-foreground">Teaching staff members</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <BookOpen className="mr-2 h-5 w-5 text-cyan-500" />
-              Subjects
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">8</p>
-            <p className="text-sm text-muted-foreground">Active courses</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/subjects" passHref>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center">
+                <BookOpen className="mr-2 h-5 w-5 text-cyan-500" />
+                Subjects
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">8</p>
+              <p className="text-sm text-muted-foreground">Active courses</p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader className="pb-2">

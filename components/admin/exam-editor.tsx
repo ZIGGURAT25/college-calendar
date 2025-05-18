@@ -2,15 +2,16 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { Plus, Trash2, Edit } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Plus, Trash2, Edit, CalendarIcon } from "lucide-react"
 
-import { formatDate, formatTime } from "@/lib/utils"
+import { cn, formatDate, formatTime } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { type Exam, type ExamRoom, getSubjectById, getExamRoomsByExamId, subjects, exams } from "@/lib/data"
 
 export function ExamEditor() {
@@ -22,6 +23,9 @@ export function ExamEditor() {
   const [examFormData, setExamFormData] = useState({
     subjectId: "",
     date: new Date(),
+    day: "1",
+    month: (new Date().getMonth() + 1).toString(),
+    year: new Date().getFullYear().toString(),
     time: "09:00",
   })
   const [roomFormData, setRoomFormData] = useState({
@@ -31,9 +35,13 @@ export function ExamEditor() {
 
   const handleAddExam = () => {
     setIsEditMode(false)
+    const today = new Date()
     setExamFormData({
       subjectId: "",
-      date: new Date(),
+      date: today,
+      day: today.getDate().toString(),
+      month: (today.getMonth() + 1).toString(),
+      year: today.getFullYear().toString(),
       time: "09:00",
     })
     setIsExamDialogOpen(true)
@@ -42,9 +50,13 @@ export function ExamEditor() {
   const handleEditExam = (exam: Exam) => {
     setIsEditMode(true)
     setSelectedExam(exam)
+    const examDate = new Date(exam.date)
     setExamFormData({
       subjectId: exam.subjectId.toString(),
-      date: new Date(exam.date),
+      date: examDate,
+      day: examDate.getDate().toString(),
+      month: (examDate.getMonth() + 1).toString(),
+      year: examDate.getFullYear().toString(),
       time: exam.time,
     })
     setIsExamDialogOpen(true)
@@ -85,8 +97,24 @@ export function ExamEditor() {
   const handleExamFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Create a date object from the selected values
+    const selectedDate = new Date(
+      parseInt(examFormData.year),
+      parseInt(examFormData.month) - 1,
+      parseInt(examFormData.day)
+    )
+
+    // Update the date in form data
+    setExamFormData({
+      ...examFormData,
+      date: selectedDate
+    })
+
     // In a real app, this would call an API to save the exam
-    console.log("Exam form submitted:", examFormData)
+    console.log("Exam form submitted:", {
+      ...examFormData,
+      date: selectedDate.toISOString()
+    })
 
     if (isEditMode && selectedExam) {
       alert(`Exam ${selectedExam.id} would be updated in a real application`)
@@ -259,12 +287,43 @@ export function ExamEditor() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Date</label>
-              <Calendar
-                mode="single"
-                selected={examFormData.date}
-                onSelect={(date) => date && setExamFormData({ ...examFormData, date })}
-                className="rounded-md border"
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={examFormData.month} onValueChange={(value) => handleSelectChange("month", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                      <SelectItem key={month} value={month.toString()}>
+                        {new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Day"
+                  value={examFormData.day}
+                  onChange={(e) => handleSelectChange("day", e.target.value)}
+                  className="w-full"
+                />
+
+                <Select value={examFormData.year} onValueChange={(value) => handleSelectChange("year", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">

@@ -1,3 +1,5 @@
+"use client"
+
 // Mock data for the application
 
 // Types
@@ -10,28 +12,40 @@ export type Student = {
 export type Faculty = {
   id: number
   name: string
-  email: string
+  department: string
+  designation: string
 }
 
 export type Subject = {
   id: number
   subjectCode: string
   subjectName: string
-  facultyId: number
-  type: "Theory" | "Lab" | "Elective" | "Combined" | "Break" | "Lunch"
+  type: "Theory" | "Lab" | "Elective" | "Combined"
+  facultyId: number | null
+  semester: number
+}
+
+export type PeriodTiming = {
+  period: number
+  duration: number // in minutes
+}
+
+export type DaySchedule = {
+  firstPeriodStartTime: string
+  periods: { duration: number }[]
 }
 
 export type TimetableEntry = {
   id: number
-  day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
+  day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday"
   periodNumber: number
   subjectId: number
   facultyId: number | null
   room: string
   isElective: boolean
   slotsUsed: number
-  isBreak?: boolean
-  isLunch?: boolean
+  isBreak: boolean
+  isLunch: boolean
 }
 
 export type Exam = {
@@ -51,11 +65,11 @@ export type ExamRoom = {
 export type Config = {
   id: number
   showMonday: boolean
-  mondayCloneDay: "Tuesday" | "Wednesday" | "Thursday" | "Friday"
-  periodTimes: string // JSON string of period start/end times
+  defaultPeriodDuration: number // in minutes
   holidayDates: string // JSON string of holiday dates
-  breakPeriod: number | null
-  lunchPeriod: number | null
+  workingMondays: string[] // Array of dates for working Mondays
+  workingMondaySchedules: { [date: string]: "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" }
+  daySchedules: Record<string, DaySchedule>
 }
 
 // Generate mock students
@@ -74,245 +88,125 @@ export const students: Student[] = Array.from({ length: 70 }, (_, i) => {
 
 // Generate mock faculty
 export const faculty: Faculty[] = [
-  { id: 1, name: "Dr. John Smith", email: "john.smith@college.edu" },
-  { id: 2, name: "Prof. Sarah Johnson", email: "sarah.johnson@college.edu" },
-  { id: 3, name: "Dr. Michael Brown", email: "michael.brown@college.edu" },
-  { id: 4, name: "Prof. Emily Davis", email: "emily.davis@college.edu" },
-  { id: 5, name: "Dr. Robert Wilson", email: "robert.wilson@college.edu" },
-  { id: 6, name: "Prof. Jennifer Lee", email: "jennifer.lee@college.edu" },
+  { id: 1, name: "Dr. John Smith", department: "Computer Science", designation: "Professor" },
+  { id: 2, name: "Dr. Sarah Johnson", department: "Computer Science", designation: "Associate Professor" },
+  { id: 3, name: "Prof. Michael Brown", department: "Computer Science", designation: "Assistant Professor" },
+  { id: 4, name: "Dr. Emily Davis", department: "Computer Science", designation: "Professor" },
+  { id: 5, name: "Dr. Robert Wilson", department: "Computer Science", designation: "Professor" },
+  { id: 6, name: "Prof. Jennifer Lee", department: "Computer Science", designation: "Professor" },
 ]
 
 // Generate mock subjects
 export const subjects: Subject[] = [
-  { id: 1, subjectCode: "CS101", subjectName: "Introduction to Programming", facultyId: 1, type: "Theory" },
-  { id: 2, subjectCode: "CS102", subjectName: "Data Structures", facultyId: 2, type: "Theory" },
-  { id: 3, subjectCode: "CS103", subjectName: "Database Systems", facultyId: 3, type: "Theory" },
-  { id: 4, subjectCode: "CS104", subjectName: "Programming Lab", facultyId: 1, type: "Lab" },
-  { id: 5, subjectCode: "CS105", subjectName: "Database Lab", facultyId: 3, type: "Lab" },
-  { id: 6, subjectCode: "CS106", subjectName: "Web Development", facultyId: 4, type: "Elective" },
-  { id: 7, subjectCode: "CS107", subjectName: "Machine Learning", facultyId: 5, type: "Elective" },
-  { id: 8, subjectCode: "CS108", subjectName: "Computer Networks", facultyId: 6, type: "Combined" },
-  { id: 9, subjectCode: "BREAK", subjectName: "Morning Break", facultyId: 0, type: "Break" },
-  { id: 10, subjectCode: "LUNCH", subjectName: "Lunch Break", facultyId: 0, type: "Lunch" },
+  { id: 1, subjectCode: "CS101", subjectName: "Introduction to Programming", type: "Theory", facultyId: 1, semester: 1 },
+  { id: 2, subjectCode: "CS102", subjectName: "Data Structures", type: "Theory", facultyId: 2, semester: 1 },
+  { id: 3, subjectCode: "CS103", subjectName: "Database Systems", type: "Combined", facultyId: 3, semester: 2 },
+  { id: 4, subjectCode: "CS104", subjectName: "Programming Lab", type: "Lab", facultyId: 1, semester: 1 },
+  { id: 5, subjectCode: "CS105", subjectName: "Database Lab", type: "Lab", facultyId: 3, semester: 2 },
+  { id: 6, subjectCode: "CS106", subjectName: "Web Development", type: "Elective", facultyId: 4, semester: 3 },
+  { id: 7, subjectCode: "CS107", subjectName: "Machine Learning", type: "Elective", facultyId: 5, semester: 3 },
+  { id: 8, subjectCode: "CS108", subjectName: "Computer Networks", type: "Combined", facultyId: 6, semester: 2 },
 ]
 
-// Generate mock timetable
-export const timetable: TimetableEntry[] = [
-  // Monday
-  { id: 1, day: "Monday", periodNumber: 1, subjectId: 1, facultyId: 1, room: "A101", isElective: false, slotsUsed: 1 },
-  { id: 2, day: "Monday", periodNumber: 2, subjectId: 2, facultyId: 2, room: "A102", isElective: false, slotsUsed: 1 },
+// Initial timetable data
+let timetableData: TimetableEntry[] = [
+  {
+    id: 1,
+    day: "Monday",
+    periodNumber: 1,
+    subjectId: 1,
+    facultyId: 1,
+    room: "101",
+    isElective: false,
+    slotsUsed: 1,
+    isBreak: false,
+    isLunch: false,
+  },
+  {
+    id: 2,
+    day: "Monday",
+    periodNumber: 2,
+    subjectId: 2,
+    facultyId: 2,
+    room: "102",
+    isElective: false,
+    slotsUsed: 1,
+    isBreak: false,
+    isLunch: false,
+  },
   {
     id: 3,
     day: "Monday",
     periodNumber: 3,
-    subjectId: 9,
+    subjectId: 0,
     facultyId: null,
-    room: "All",
+    room: "",
     isElective: false,
     slotsUsed: 1,
     isBreak: true,
+    isLunch: false,
   },
-  { id: 4, day: "Monday", periodNumber: 4, subjectId: 3, facultyId: 3, room: "A103", isElective: false, slotsUsed: 1 },
+  {
+    id: 4,
+    day: "Monday",
+    periodNumber: 4,
+    subjectId: 3,
+    facultyId: 1,
+    room: "Lab 1",
+    isElective: false,
+    slotsUsed: 2,
+    isBreak: false,
+    isLunch: false,
+  },
   {
     id: 5,
     day: "Monday",
-    periodNumber: 5,
-    subjectId: 10,
+    periodNumber: 6,
+    subjectId: 0,
     facultyId: null,
-    room: "Cafeteria",
+    room: "",
     isElective: false,
     slotsUsed: 1,
+    isBreak: false,
     isLunch: true,
   },
-  { id: 6, day: "Monday", periodNumber: 6, subjectId: 8, facultyId: 6, room: "A104", isElective: false, slotsUsed: 1 },
-  // Tuesday
-  { id: 7, day: "Tuesday", periodNumber: 1, subjectId: 2, facultyId: 2, room: "A102", isElective: false, slotsUsed: 1 },
-  { id: 8, day: "Tuesday", periodNumber: 2, subjectId: 3, facultyId: 3, room: "A103", isElective: false, slotsUsed: 1 },
   {
-    id: 9,
-    day: "Tuesday",
-    periodNumber: 3,
-    subjectId: 9,
-    facultyId: null,
-    room: "All",
-    isElective: false,
-    slotsUsed: 1,
-    isBreak: true,
-  },
-  {
-    id: 10,
-    day: "Tuesday",
-    periodNumber: 4,
+    id: 6,
+    day: "Monday",
+    periodNumber: 7,
     subjectId: 4,
-    facultyId: 1,
-    room: "Lab1",
+    facultyId: 3,
+    room: "201",
     isElective: false,
-    slotsUsed: 2,
+    slotsUsed: 1,
+    isBreak: false,
+    isLunch: false,
   },
+  // Tuesday
   {
-    id: 11,
+    id: 7,
     day: "Tuesday",
-    periodNumber: 6,
-    subjectId: 10,
-    facultyId: null,
-    room: "Cafeteria",
-    isElective: false,
-    slotsUsed: 1,
-    isLunch: true,
-  },
-  // Wednesday
-  {
-    id: 12,
-    day: "Wednesday",
     periodNumber: 1,
-    subjectId: 1,
-    facultyId: 1,
-    room: "A101",
-    isElective: false,
-    slotsUsed: 1,
-  },
-  {
-    id: 13,
-    day: "Wednesday",
-    periodNumber: 2,
-    subjectId: 6,
-    facultyId: 4,
-    room: "A105",
-    isElective: true,
-    slotsUsed: 1,
-  },
-  {
-    id: 14,
-    day: "Wednesday",
-    periodNumber: 2,
-    subjectId: 7,
-    facultyId: 5,
-    room: "A106",
-    isElective: true,
-    slotsUsed: 1,
-  },
-  {
-    id: 15,
-    day: "Wednesday",
-    periodNumber: 3,
-    subjectId: 9,
-    facultyId: null,
-    room: "All",
-    isElective: false,
-    slotsUsed: 1,
-    isBreak: true,
-  },
-  {
-    id: 16,
-    day: "Wednesday",
-    periodNumber: 4,
-    subjectId: 5,
-    facultyId: 3,
-    room: "Lab2",
-    isElective: false,
-    slotsUsed: 2,
-  },
-  {
-    id: 17,
-    day: "Wednesday",
-    periodNumber: 6,
-    subjectId: 10,
-    facultyId: null,
-    room: "Cafeteria",
-    isElective: false,
-    slotsUsed: 1,
-    isLunch: true,
-  },
-  // Thursday
-  {
-    id: 18,
-    day: "Thursday",
-    periodNumber: 1,
-    subjectId: 3,
-    facultyId: 3,
-    room: "A103",
-    isElective: false,
-    slotsUsed: 1,
-  },
-  {
-    id: 19,
-    day: "Thursday",
-    periodNumber: 2,
-    subjectId: 1,
-    facultyId: 1,
-    room: "A101",
-    isElective: false,
-    slotsUsed: 1,
-  },
-  {
-    id: 20,
-    day: "Thursday",
-    periodNumber: 3,
-    subjectId: 9,
-    facultyId: null,
-    room: "All",
-    isElective: false,
-    slotsUsed: 1,
-    isBreak: true,
-  },
-  {
-    id: 21,
-    day: "Thursday",
-    periodNumber: 4,
     subjectId: 2,
     facultyId: 2,
-    room: "A102",
+    room: "102",
     isElective: false,
     slotsUsed: 1,
+    isBreak: false,
+    isLunch: false,
   },
   {
-    id: 22,
-    day: "Thursday",
-    periodNumber: 5,
-    subjectId: 10,
-    facultyId: null,
-    room: "Cafeteria",
-    isElective: false,
-    slotsUsed: 1,
-    isLunch: true,
-  },
-  {
-    id: 23,
-    day: "Thursday",
-    periodNumber: 6,
-    subjectId: 8,
-    facultyId: 6,
-    room: "A104",
-    isElective: false,
-    slotsUsed: 1,
-  },
-  // Friday
-  { id: 24, day: "Friday", periodNumber: 1, subjectId: 6, facultyId: 4, room: "A105", isElective: true, slotsUsed: 1 },
-  { id: 25, day: "Friday", periodNumber: 1, subjectId: 7, facultyId: 5, room: "A106", isElective: true, slotsUsed: 1 },
-  {
-    id: 26,
-    day: "Friday",
+    id: 8,
+    day: "Tuesday",
     periodNumber: 2,
-    subjectId: 9,
-    facultyId: null,
-    room: "All",
-    isElective: false,
+    subjectId: 5,
+    facultyId: 4,
+    room: "301",
+    isElective: true,
     slotsUsed: 1,
-    isBreak: true,
+    isBreak: false,
+    isLunch: false,
   },
-  { id: 27, day: "Friday", periodNumber: 3, subjectId: 4, facultyId: 1, room: "Lab1", isElective: false, slotsUsed: 2 },
-  {
-    id: 28,
-    day: "Friday",
-    periodNumber: 5,
-    subjectId: 10,
-    facultyId: null,
-    room: "Cafeteria",
-    isElective: false,
-    slotsUsed: 1,
-    isLunch: true,
-  },
-  { id: 29, day: "Friday", periodNumber: 6, subjectId: 8, facultyId: 6, room: "A104", isElective: false, slotsUsed: 1 },
 ]
 
 // Generate mock exams
@@ -342,33 +236,100 @@ export const examRooms: ExamRoom[] = [
   { id: 11, examId: 8, roomName: "A103", registerRange: "230601001-230601070" },
 ]
 
-// Generate mock config
+// Configuration
 export const config: Config = {
   id: 1,
   showMonday: true,
-  mondayCloneDay: "Tuesday",
-  periodTimes: JSON.stringify([
-    { period: 1, start: "09:00", end: "09:50" },
-    { period: 2, start: "10:00", end: "10:50" },
-    { period: 3, start: "11:00", end: "11:50" },
-    { period: 4, start: "12:00", end: "12:20" }, // Break
-    { period: 5, start: "12:30", end: "13:20" },
-    { period: 6, start: "13:30", end: "14:10" }, // Lunch
-    { period: 7, start: "14:20", end: "15:10" },
-    { period: 8, start: "15:20", end: "16:10" },
-  ]),
+  defaultPeriodDuration: 50, // 50 minutes default period duration
   holidayDates: JSON.stringify([
     "2025-05-01", // Labor Day
     "2025-05-15", // College Foundation Day
     "2025-06-15", // Mid-semester break
   ]),
-  breakPeriod: 4,
-  lunchPeriod: 6,
+  workingMondays: [],
+  workingMondaySchedules: {},
+  daySchedules: {
+    Monday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 }, // 9:00 - 9:50
+        { duration: 50 }, // 9:50 - 10:40
+        { duration: 20 }, // 10:40 - 11:00 (Break)
+        { duration: 50 }, // 11:00 - 11:50
+        { duration: 50 }, // 11:50 - 12:40
+        { duration: 60 }, // 12:40 - 1:40 (Lunch)
+        { duration: 50 }, // 1:40 - 2:30
+        { duration: 50 }, // 2:30 - 3:20
+      ],
+    },
+    Tuesday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 20 },
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 60 },
+        { duration: 50 },
+        { duration: 50 },
+      ],
+    },
+    Wednesday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 20 },
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 60 },
+        { duration: 50 },
+        { duration: 50 },
+      ],
+    },
+    Thursday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 20 },
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 60 },
+        { duration: 50 },
+        { duration: 50 },
+      ],
+    },
+    Friday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 20 },
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 60 },
+        { duration: 50 },
+        { duration: 50 },
+      ],
+    },
+    Saturday: {
+      firstPeriodStartTime: "09:00",
+      periods: [
+        { duration: 50 },
+        { duration: 50 },
+        { duration: 20 },
+        { duration: 50 },
+        { duration: 50 },
+      ],
+    },
+  },
 }
 
 // Helper functions
 export function getSubjectById(id: number): Subject | undefined {
-  return subjects.find((subject) => subject.id === id)
+  return subjects.find((s) => s.id === id)
 }
 
 export function getFacultyById(id: number | null): Faculty | undefined {
@@ -377,7 +338,7 @@ export function getFacultyById(id: number | null): Faculty | undefined {
 }
 
 export function getTimetableForDay(day: string): TimetableEntry[] {
-  return timetable.filter((entry) => entry.day === day)
+  return timetableData.filter((entry) => entry.day === day)
 }
 
 export function getExamById(id: number): Exam | undefined {
@@ -393,8 +354,27 @@ export function isHoliday(date: string): boolean {
   return holidayDates.includes(date)
 }
 
-export function getPeriodTimes() {
-  return JSON.parse(config.periodTimes)
+export function calculatePeriodStartTime(daySchedule: DaySchedule, periodNumber: number): string {
+  const [hours, minutes] = daySchedule.firstPeriodStartTime.split(":").map(Number)
+  let totalMinutes = hours * 60 + minutes
+
+  for (let i = 1; i < periodNumber; i++) {
+    totalMinutes += daySchedule.periods[i - 1].duration
+  }
+
+  const resultHours = Math.floor(totalMinutes / 60)
+  const resultMinutes = totalMinutes % 60
+  return `${resultHours.toString().padStart(2, "0")}:${resultMinutes.toString().padStart(2, "0")}`
+}
+
+export function calculatePeriodEndTime(daySchedule: DaySchedule, periodNumber: number): string {
+  const startTime = calculatePeriodStartTime(daySchedule, periodNumber)
+  const [hours, minutes] = startTime.split(":").map(Number)
+  const totalMinutes = hours * 60 + minutes + daySchedule.periods[periodNumber - 1].duration
+
+  const resultHours = Math.floor(totalMinutes / 60)
+  const resultMinutes = totalMinutes % 60
+  return `${resultHours.toString().padStart(2, "0")}:${resultMinutes.toString().padStart(2, "0")}`
 }
 
 export function isStudentInRegisterRange(registerNo: string, range: string): boolean {
@@ -424,19 +404,15 @@ export function getExamRoomForStudent(examId: number, registerNo: string): strin
 export function getColorForSubject(subject: Subject): string {
   switch (subject.type) {
     case "Theory":
-      return "event-class-blue"
+      return "bg-blue-50 text-blue-700"
     case "Lab":
-      return "event-class-cyan"
+      return "bg-purple-50 text-purple-700"
     case "Elective":
-      return "event-class-purple"
+      return "bg-green-50 text-green-700"
     case "Combined":
-      return "event-exam-orange"
-    case "Break":
-      return "event-break"
-    case "Lunch":
-      return "event-lunch"
+      return "bg-orange-50 text-orange-700"
     default:
-      return "event-class-blue"
+      return "bg-gray-50 text-gray-700"
   }
 }
 
@@ -447,21 +423,21 @@ export function getColorForExam(): string {
 
 // Check if a period is a break or lunch
 export function isBreakPeriod(periodNumber: number): boolean {
-  return config.breakPeriod === periodNumber
+  return config.daySchedules[periodNumber.toString()].breakPeriod === periodNumber
 }
 
 export function isLunchPeriod(periodNumber: number): boolean {
-  return config.lunchPeriod === periodNumber
+  return config.daySchedules[periodNumber.toString()].lunchPeriod === periodNumber
 }
 
 // Get all break and lunch entries
 export function getBreakEntries(): TimetableEntry[] {
-  return timetable.filter((entry) => entry.isBreak || entry.isLunch)
+  return timetableData.filter((entry) => isBreakPeriod(entry.periodNumber) || isLunchPeriod(entry.periodNumber))
 }
 
 // Generate a new unique ID for timetable entries
 export function generateNewTimetableEntryId(): number {
-  return Math.max(...timetable.map((entry) => entry.id)) + 1
+  return Math.max(...timetableData.map((entry) => entry.id)) + 1
 }
 
 // Add a new timetable entry
@@ -470,36 +446,28 @@ export function addTimetableEntry(entry: Omit<TimetableEntry, "id">): TimetableE
     ...entry,
     id: generateNewTimetableEntryId(),
   }
-  timetable.push(newEntry)
+  timetableData.push(newEntry)
   return newEntry
 }
 
 // Update a timetable entry
-export function updateTimetableEntry(id: number, updates: Partial<TimetableEntry>): TimetableEntry | null {
-  const index = timetable.findIndex((entry) => entry.id === id)
+export function updateTimetableEntry(id: number, data: Partial<TimetableEntry>): TimetableEntry | null {
+  const index = timetableData.findIndex((e) => e.id === id)
   if (index === -1) return null
 
-  const updatedEntry = { ...timetable[index], ...updates }
-  timetable[index] = updatedEntry
-  return updatedEntry
+  timetableData[index] = { ...timetableData[index], ...data }
+  return timetableData[index]
 }
 
 // Delete a timetable entry
-export function deleteTimetableEntry(id: number): boolean {
-  const index = timetable.findIndex((entry) => entry.id === id)
-  if (index === -1) return false
-
-  timetable.splice(index, 1)
-  return true
+export function deleteTimetableEntry(id: number): void {
+  timetableData = timetableData.filter((e) => e.id !== id)
 }
 
 // Move a timetable entry to a new day and period
-export function moveTimetableEntry(
-  id: number,
-  newDay: TimetableEntry["day"],
-  newPeriod: number,
-): TimetableEntry | null {
-  return updateTimetableEntry(id, { day: newDay, periodNumber: newPeriod })
+export function moveTimetableEntry(id: number, newDay: TimetableEntry["day"], newPeriod: number): TimetableEntry | null {
+  const entry = updateTimetableEntry(id, { day: newDay, periodNumber: newPeriod })
+  return entry
 }
 
 // Get exams for a specific month
@@ -541,4 +509,24 @@ export function getCurrentPeriod(periodTimes: any[]): number | null {
   }
 
   return null
+}
+
+// Get period times for the current day
+export function getPeriodTimes(): { period: number; start: string; end: string }[] {
+  const today = new Date()
+  const dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()]
+  const daySchedule = config.daySchedules[dayOfWeek]
+
+  if (!daySchedule) {
+    return []
+  }
+
+  return daySchedule.periods.map((period, index) => {
+    const periodNumber = index + 1
+    return {
+      period: period.period,
+      start: calculatePeriodStartTime(daySchedule, periodNumber),
+      end: calculatePeriodEndTime(daySchedule, periodNumber)
+    }
+  })
 }

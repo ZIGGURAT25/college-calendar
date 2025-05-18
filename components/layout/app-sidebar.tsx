@@ -272,18 +272,6 @@ export function Sidebar({ userRole, onToggleView, onOpenAdminAuth }: SidebarProp
               </Button>
             </div>
           </div>
-
-          {/* Logout - always at the bottom */}
-          <div className="pt-4 border-t">
-            <Link
-              href={userRole === "admin" ? "/admin/login" : "/login"}
-              className="flex items-center px-3 py-2 text-sm rounded-md text-red-500 hover:bg-red-500/10"
-              onClick={closeSidebar}
-            >
-              <LogOut className="mr-2 h-5 w-5" />
-              Logout
-            </Link>
-          </div>
         </nav>
       </div>
 
